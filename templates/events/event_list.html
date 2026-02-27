@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Events{% endblock title %}
+
+{% block main %}
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+        corePlugins: { preflight: false },
+        theme: {
+            extend: {
+                colors: {
+                    brand: '#f97316',
+                    brandGlow: '#22d3ee',
+                }
+            }
+        }
+    };
+</script>
+
+<section class="py-10">
+    <div class="max-w-5xl mx-auto">
+        <div class="mb-6 flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-brand to-brandGlow text-slate-900 font-extrabold grid place-items-center shadow-lg">📅</div>
+                <div>
+                    <p class="text-sm text-slate-400">Browse all</p>
+                    <h1 class="text-2xl font-semibold text-slate-100">Events</h1>
+                </div>
+            </div>
+            <a href="{% url 'add_event' %}" class="px-5 py-3 rounded-xl text-slate-900 font-semibold bg-gradient-to-r from-brand to-brandGlow shadow-lg hover:brightness-110 transition">+ Add Event</a>
+        </div>
+
+        <div class="rounded-2xl border border-white/10 bg-slate-900/70 shadow-2xl backdrop-blur overflow-hidden">
+            {% if events %}
+            <table class="w-full text-left text-sm">
+                <thead class="border-b border-white/10 text-slate-400 uppercase text-xs tracking-wide">
+                    <tr>
+                        <th class="px-5 py-4">Name</th>
+                        <th class="px-5 py-4">Category</th>
+                        <th class="px-5 py-4">Date & Time</th>
+                        <th class="px-5 py-4">Location</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    {% for event in events %}
+                    <tr class="hover:bg-white/5 transition">
+                        <td class="px-5 py-4 font-medium text-slate-100">{{ event.name }}</td>
+                        <td class="px-5 py-4 text-slate-300">{{ event.category.name|default:"-" }}</td>
+                        <td class="px-5 py-4 text-slate-300">{{ event.date_time|date:"M d, Y H:i" }}</td>
+                        <td class="px-5 py-4 text-slate-400">{{ event.location|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="p-10 text-center text-slate-400">No events yet. <a href="{% url 'add_event' %}" class="text-brandGlow hover:underline">Create one</a></div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock main %}
