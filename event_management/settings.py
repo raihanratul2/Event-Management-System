@@ -25,7 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'events',
+    'events.apps.EventsConfig',
 ]
 
 MIDDLEWARE = [
@@ -94,3 +94,11 @@ STATIC_URL = 'static/'
 MEDIA_URL = 'media/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_ROOT = BASE_DIR / 'media'
+
+LOGIN_REDIRECT_URL = 'dashboard_redirect'
+LOGOUT_REDIRECT_URL = 'home'
+LOGIN_URL = 'login'
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@eventmanager.local'
+ACTIVATION_BASE_URL = 'http://127.0.0.1:8000'

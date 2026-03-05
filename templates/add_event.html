@@ -29,7 +29,7 @@
         </div>
 
         <div class="rounded-2xl border border-white/10 bg-slate-900/70 shadow-2xl shadow-cyan-900/20 backdrop-blur">
-            <form method="post" class="p-6 md:p-8 space-y-6">
+            <form method="post" enctype="multipart/form-data" class="p-6 md:p-8 space-y-6">
                 {% csrf_token %}
 
                 {% if form.non_field_errors %}
@@ -79,6 +79,14 @@
                     {{ form.description }}
                     {% if form.description.errors %}
                         <p class="text-xs text-red-300">{{ form.description.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="space-y-2">
+                    <label for="{{ form.image.id_for_label }}" class="text-sm font-medium text-slate-200">Event Image</label>
+                    {{ form.image }}
+                    {% if form.image.errors %}
+                        <p class="text-xs text-red-300">{{ form.image.errors|join:", " }}</p>
                     {% endif %}
                 </div>
 

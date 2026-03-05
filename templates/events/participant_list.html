@@ -27,7 +27,6 @@
                     <h1 class="text-2xl font-semibold text-slate-100">Participants</h1>
                 </div>
             </div>
-            <a href="{% url 'add_participant' %}" class="px-5 py-3 rounded-xl text-slate-900 font-semibold bg-gradient-to-r from-brand to-brandGlow shadow-lg hover:brightness-110 transition">+ Add Participant</a>
         </div>
 
         <div class="rounded-2xl border border-white/10 bg-slate-900/70 shadow-2xl backdrop-blur overflow-hidden">
@@ -37,27 +36,34 @@
                     <tr>
                         <th class="px-5 py-4">Name</th>
                         <th class="px-5 py-4">Email</th>
-                        <th class="px-5 py-4">Events</th>
+                        <th class="px-5 py-4">RSVP Events</th>
+                        <th class="px-5 py-4">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-white/5">
                     {% for p in participants %}
                     <tr class="hover:bg-white/5 transition">
-                        <td class="px-5 py-4 font-medium text-slate-100">{{ p.name }}</td>
+                        <td class="px-5 py-4 font-medium text-slate-100">{{ p.get_full_name|default:p.username }}</td>
                         <td class="px-5 py-4 text-slate-300">{{ p.email }}</td>
                         <td class="px-5 py-4 text-slate-400">
-                            {% for e in p.event.all %}
+                            {% for e in p.rsvp_events.all %}
                                 <span class="inline-block bg-white/5 rounded px-2 py-0.5 text-xs mr-1 mb-1">{{ e.name }}</span>
                             {% empty %}
                                 -
                             {% endfor %}
+                        </td>
+                        <td class="px-5 py-4 text-slate-400">
+                            <form method="post" action="{% url 'delete_participant' p.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-link p-0 text-danger">Delete</button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
             {% else %}
-            <div class="p-10 text-center text-slate-400">No participants yet. <a href="{% url 'add_participant' %}" class="text-brandGlow hover:underline">Add one</a></div>
+            <div class="p-10 text-center text-slate-400">No participants yet.</div>
             {% endif %}
         </div>
     </div>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load role_tags %}
 {% block title %}Events{% endblock title %}
 
 {% block main %}
@@ -27,7 +28,10 @@
                     <h1 class="text-2xl font-semibold text-slate-100">Events</h1>
                 </div>
             </div>
+            {% if request.user|has_group:'Admin' or request.user|has_group:'Organizer' %}
             <a href="{% url 'add_event' %}" class="px-5 py-3 rounded-xl text-slate-900 font-semibold bg-gradient-to-r from-brand to-brandGlow shadow-lg hover:brightness-110 transition">+ Add Event</a>
+            {% else %}
+            {% endif %}
         </div>
 
         <div class="rounded-2xl border border-white/10 bg-slate-900/70 shadow-2xl backdrop-blur overflow-hidden">
@@ -35,25 +39,53 @@
             <table class="w-full text-left text-sm">
                 <thead class="border-b border-white/10 text-slate-400 uppercase text-xs tracking-wide">
                     <tr>
+                        <th class="px-5 py-4">Image</th>
                         <th class="px-5 py-4">Name</th>
                         <th class="px-5 py-4">Category</th>
                         <th class="px-5 py-4">Date & Time</th>
                         <th class="px-5 py-4">Location</th>
+                        <th class="px-5 py-4">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-white/5">
                     {% for event in events %}
                     <tr class="hover:bg-white/5 transition">
+                        <td class="px-5 py-4 text-slate-300">
+                            <img src="{{ event.image.url }}" alt="{{ event.name }}" style="width:56px; height:56px; object-fit:cover; border-radius:8px;">
+                        </td>
                         <td class="px-5 py-4 font-medium text-slate-100">{{ event.name }}</td>
                         <td class="px-5 py-4 text-slate-300">{{ event.category.name|default:"-" }}</td>
                         <td class="px-5 py-4 text-slate-300">{{ event.date_time|date:"M d, Y H:i" }}</td>
                         <td class="px-5 py-4 text-slate-400">{{ event.location|default:"-" }}</td>
+                        <td class="px-5 py-4 text-slate-400">
+                            {% if request.user|has_group:'Admin' or request.user|has_group:'Organizer' %}
+                                <a href="{% url 'edit_event' event.id %}" class="text-brandGlow hover:underline me-2">Edit</a>
+                                <form method="post" action="{% url 'delete_event' event.id %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-link p-0 text-danger">Delete</button>
+                                </form>
+                            {% elif request.user|has_group:'Participant' %}
+                                {% if request.user in event.rsvps.all %}
+                                    <span class="text-success">RSVP'd</span>
+                                {% else %}
+                                    <form method="post" action="{% url 'rsvp_event' event.id %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-primary">RSVP</button>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
             {% else %}
-            <div class="p-10 text-center text-slate-400">No events yet. <a href="{% url 'add_event' %}" class="text-brandGlow hover:underline">Create one</a></div>
+            <div class="p-10 text-center text-slate-400">No events yet.
+                {% if request.user|has_group:'Admin' or request.user|has_group:'Organizer' %}
+                <a href="{% url 'add_event' %}" class="text-brandGlow hover:underline">Create one</a>
+                {% else %}
+                {% endif %}
+            </div>
             {% endif %}
         </div>
     </div>

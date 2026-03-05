@@ -1,5 +1,7 @@
 from django import forms
-from .models import Event, Category, Participant
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib.auth.models import Group, User
+from .models import Event, Category
 
 BASE_CLASSES = (
     "w-full rounded-xl bg-slate-900/60 border border-white/10 "
@@ -11,7 +13,7 @@ BASE_CLASSES = (
 class EventForm(forms.ModelForm):
     class Meta:
         model = Event
-        fields = ['name', 'description', 'location', 'date_time', 'category']
+        fields = ['name', 'description', 'location', 'date_time', 'category', 'image']
         labels = {
             'name': 'Event Name',
             'description': 'Event Description',
@@ -40,6 +42,9 @@ class EventForm(forms.ModelForm):
             'category': forms.Select(attrs={
                 'class': BASE_CLASSES,
             }),
+            'image': forms.ClearableFileInput(attrs={
+                'class': BASE_CLASSES,
+            }),
         }
 
 
@@ -64,25 +69,49 @@ class CategoryForm(forms.ModelForm):
         }
 
 
-class ParticipantForm(forms.ModelForm):
+class SignUpForm(UserCreationForm):
+    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': BASE_CLASSES, 'placeholder': 'email@example.com'}))
+    first_name = forms.CharField(required=True, widget=forms.TextInput(attrs={'class': BASE_CLASSES, 'placeholder': 'First name'}))
+    last_name = forms.CharField(required=True, widget=forms.TextInput(attrs={'class': BASE_CLASSES, 'placeholder': 'Last name'}))
+
     class Meta:
-        model = Participant
-        fields = ['name', 'email', 'event']
-        labels = {
-            'name': 'Participant Name',
-            'email': 'Email Address',
-            'event': 'Events',
-        }
+        model = User
+        fields = ('username', 'email', 'first_name', 'last_name', 'password1', 'password2')
         widgets = {
-            'name': forms.TextInput(attrs={
-                'class': BASE_CLASSES,
-                'placeholder': 'Full name',
-            }),
-            'email': forms.EmailInput(attrs={
-                'class': BASE_CLASSES,
-                'placeholder': 'email@example.com',
-            }),
-            'event': forms.SelectMultiple(attrs={
-                'class': BASE_CLASSES,
-            }),
+            'username': forms.TextInput(attrs={'class': BASE_CLASSES, 'placeholder': 'Username'}),
         }
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+        user.first_name = self.cleaned_data['first_name']
+        user.last_name = self.cleaned_data['last_name']
+        user.is_active = False
+        if commit:
+            user.save()
+        return user
+
+
+class LoginForm(AuthenticationForm):
+    username = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+
+
+class GroupCreateForm(forms.Form):
+    name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': BASE_CLASSES, 'placeholder': 'Group name'}))
+
+    def clean_name(self):
+        name = self.cleaned_data['name'].strip()
+        if Group.objects.filter(name__iexact=name).exists():
+            raise forms.ValidationError('Group already exists.')
+        return name
+
+
+class RoleUpdateForm(forms.Form):
+    user = forms.ModelChoiceField(queryset=User.objects.all(), widget=forms.Select(attrs={'class': BASE_CLASSES}))
+    group = forms.ModelChoiceField(queryset=Group.objects.all(), widget=forms.Select(attrs={'class': BASE_CLASSES}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['user'].queryset = User.objects.order_by('username')
+        self.fields['group'].queryset = Group.objects.order_by('name')

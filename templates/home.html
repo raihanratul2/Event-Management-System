@@ -3,5 +3,12 @@
 {% block title %}Event Management{% endblock %}
 
 {% block main %}
-<h1>Welcome to Event Management System</h1>
+<div class="container py-5 text-center">
+	<h1>Welcome to Event Management System</h1>
+	<p class="mt-3">Manage events with role-based dashboards, RSVP, and email activation.</p>
+	<div class="mt-4 d-flex gap-2 justify-content-center">
+		<a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+		<a href="{% url 'signup' %}" class="btn btn-outline-light">Sign Up</a>
+	</div>
+</div>
 {% endblock main %}

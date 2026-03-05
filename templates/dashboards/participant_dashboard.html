@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Participant Dashboard{% endblock title %}
+
+{% block main %}
+<div class="container py-4">
+    <h2>Participant Dashboard</h2>
+    <p>Your RSVP'd events:</p>
+    <div class="list-group">
+        {% for event in events %}
+            <div class="list-group-item">
+                <strong>{{ event.name }}</strong> — {{ event.date_time|date:'M d, Y H:i' }}
+                <div class="text-muted">{{ event.location|default:'TBA' }}</div>
+            </div>
+        {% empty %}
+            <div class="list-group-item">No RSVP records yet. Browse <a href="{% url 'event_list' %}">events</a>.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock main %}

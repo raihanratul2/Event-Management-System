@@ -1,7 +1,11 @@
-from .models import Category, Event, Participant
+from .models import Category, Event
 
 from django.contrib import admin
 
-admin.site.register(Event)
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+	list_display = ('name', 'date_time', 'location', 'category')
+	search_fields = ('name', 'location')
+
+
 admin.site.register(Category)
-admin.site.register(Participant)
