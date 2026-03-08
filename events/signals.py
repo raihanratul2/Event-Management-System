@@ -1,5 +1,6 @@
 from django.conf import settings
-from django.contrib.auth.models import Group, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db.models.signals import m2m_changed, post_migrate, post_save
@@ -9,6 +10,8 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
 from .models import Event
+
+User = get_user_model()
 
 
 @receiver(post_migrate)

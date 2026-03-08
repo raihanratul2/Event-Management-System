@@ -1,4 +1,6 @@
-from .models import Category, Event
+from django.contrib.auth.admin import UserAdmin
+
+from .models import Category, Event, User
 
 from django.contrib import admin
 
@@ -9,3 +11,13 @@ class EventAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Category)
+
+
+@admin.register(User)
+class CustomUserAdmin(UserAdmin):
+	fieldsets = UserAdmin.fieldsets + (
+		('Profile', {'fields': ('profile_picture', 'phone_number')}),
+	)
+	add_fieldsets = UserAdmin.add_fieldsets + (
+		('Profile', {'fields': ('profile_picture', 'phone_number')}),
+	)

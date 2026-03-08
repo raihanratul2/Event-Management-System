@@ -1,15 +1,21 @@
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.models import Group
 from django.contrib.auth.tokens import default_token_generator
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
+from django.views import View
+from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
-from .forms import CategoryForm, EventForm, GroupCreateForm, LoginForm, RoleUpdateForm, SignUpForm
+from .forms import CategoryForm, EventForm, GroupCreateForm, LoginForm, ProfileUpdateForm, RoleUpdateForm, SignUpForm
 from .models import Category, Event
+
+User = get_user_model()
 
 
 def in_group(user, groups):
@@ -90,6 +96,28 @@ def dashboard_redirect(request):
     return redirect(redirect_dashboard_for_user(request.user))
 
 
+class RoleRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    allowed_groups = []
+
+    def test_func(self):
+        return in_group(self.request.user, self.allowed_groups)
+
+    def handle_no_permission(self):
+        return redirect('login')
+
+
+class AdminRequiredMixin(RoleRequiredMixin):
+    allowed_groups = ['Admin']
+
+
+class OrganizerRequiredMixin(RoleRequiredMixin):
+    allowed_groups = ['Admin', 'Organizer']
+
+
+class ParticipantRequiredMixin(RoleRequiredMixin):
+    allowed_groups = ['Participant']
+
+
 @admin_required
 def admin_dashboard(request):
     context = {
@@ -118,38 +146,38 @@ def participant_dashboard(request):
 
 
 # ─── Events ───────────────────────────────────────────────────────────────────
-@login_required
-def event_list(request):
-    events = Event.objects.select_related('category').order_by('-date_time')
-    return render(request, 'events/event_list.html', {'events': events})
+class EventListView(LoginRequiredMixin, ListView):
+    model = Event
+    template_name = 'events/event_list.html'
+    context_object_name = 'events'
+    ordering = ['-date_time']
 
-@organizer_required
-def add_event(request):
-    form = EventForm()
-    if request.method == 'POST':
-        form = EventForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save()
-            return redirect('event_list')
-    return render(request, 'add_event.html', {'form': form})
+    def get_queryset(self):
+        return Event.objects.select_related('category').order_by('-date_time')
 
 
-@organizer_required
-def edit_event(request, pk):
-    event = get_object_or_404(Event, pk=pk)
-    form = EventForm(request.POST or None, request.FILES or None, instance=event)
-    if request.method == 'POST' and form.is_valid():
-        form.save()
-        return redirect('event_list')
-    return render(request, 'events/edit_event.html', {'form': form, 'event': event})
+class AddEventView(OrganizerRequiredMixin, CreateView):
+    form_class = EventForm
+    template_name = 'add_event.html'
+    success_url = reverse_lazy('event_list')
 
 
-@organizer_required
-def delete_event(request, pk):
-    event = get_object_or_404(Event, pk=pk)
-    if request.method == 'POST':
+class EditEventView(OrganizerRequiredMixin, UpdateView):
+    model = Event
+    form_class = EventForm
+    template_name = 'events/edit_event.html'
+    success_url = reverse_lazy('event_list')
+    context_object_name = 'event'
+
+
+class DeleteEventView(OrganizerRequiredMixin, View):
+    def post(self, request, pk):
+        event = get_object_or_404(Event, pk=pk)
         event.delete()
-    return redirect('event_list')
+        return redirect('event_list')
+
+    def get(self, request, pk):
+        return redirect('event_list')
 
 
 @participant_required
@@ -162,86 +190,138 @@ def rsvp_event(request, pk):
 
 
 # ─── Categories ───────────────────────────────────────────────────────────────
-@organizer_required
-def category_list(request):
-    categories = Category.objects.all()
-    return render(request, 'events/category_list.html', {'categories': categories})
+class CategoryListView(OrganizerRequiredMixin, ListView):
+    model = Category
+    template_name = 'events/category_list.html'
+    context_object_name = 'categories'
 
-@organizer_required
-def add_category(request):
-    form = CategoryForm()
-    if request.method == 'POST':
-        form = CategoryForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('category_list')
-    return render(request, 'events/add_category.html', {'form': form})
+    def get_queryset(self):
+        return Category.objects.all()
 
 
-@organizer_required
-def edit_category(request, pk):
-    category = get_object_or_404(Category, pk=pk)
-    form = CategoryForm(request.POST or None, instance=category)
-    if request.method == 'POST' and form.is_valid():
-        form.save()
-        return redirect('category_list')
-    return render(request, 'events/edit_category.html', {'form': form, 'category': category})
+class AddCategoryView(OrganizerRequiredMixin, CreateView):
+    form_class = CategoryForm
+    template_name = 'events/add_category.html'
+    success_url = reverse_lazy('category_list')
 
 
-@organizer_required
-def delete_category(request, pk):
-    category = get_object_or_404(Category, pk=pk)
-    if request.method == 'POST':
+class EditCategoryView(OrganizerRequiredMixin, UpdateView):
+    model = Category
+    form_class = CategoryForm
+    template_name = 'events/edit_category.html'
+    success_url = reverse_lazy('category_list')
+    context_object_name = 'category'
+
+
+class DeleteCategoryView(OrganizerRequiredMixin, View):
+    def post(self, request, pk):
+        category = get_object_or_404(Category, pk=pk)
         category.delete()
-    return redirect('category_list')
+        return redirect('category_list')
+
+    def get(self, request, pk):
+        return redirect('category_list')
 
 
 # ─── Participants ─────────────────────────────────────────────────────────────
-@admin_required
-def participant_list(request):
-    participants = User.objects.filter(groups__name='Participant').distinct().order_by('username')
-    return render(request, 'events/participant_list.html', {'participants': participants})
+class ParticipantListView(AdminRequiredMixin, ListView):
+    model = User
+    template_name = 'events/participant_list.html'
+    context_object_name = 'participants'
 
-@admin_required
-def delete_participant(request, user_id):
-    participant = get_object_or_404(User, pk=user_id, groups__name='Participant')
-    if request.method == 'POST':
+    def get_queryset(self):
+        return User.objects.filter(groups__name='Participant').distinct().order_by('username')
+
+
+class DeleteParticipantView(AdminRequiredMixin, View):
+    def post(self, request, user_id):
+        participant = get_object_or_404(User, pk=user_id, groups__name='Participant')
         participant.delete()
-    return redirect('participant_list')
+        return redirect('participant_list')
+
+    def get(self, request, user_id):
+        return redirect('participant_list')
 
 
-@admin_required
-def manage_groups(request):
-    form = GroupCreateForm(request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        Group.objects.create(name=form.cleaned_data['name'])
-        messages.success(request, 'Group created successfully.')
-        return redirect('manage_groups')
-    groups = Group.objects.all().order_by('name')
-    return render(request, 'events/group_management.html', {'form': form, 'groups': groups})
+class ManageGroupsView(AdminRequiredMixin, View):
+    template_name = 'events/group_management.html'
+
+    def get(self, request):
+        form = GroupCreateForm()
+        groups = Group.objects.all().order_by('name')
+        return render(request, self.template_name, {'form': form, 'groups': groups})
+
+    def post(self, request):
+        form = GroupCreateForm(request.POST)
+        if form.is_valid():
+            Group.objects.create(name=form.cleaned_data['name'])
+            messages.success(request, 'Group created successfully.')
+            return redirect('manage_groups')
+        groups = Group.objects.all().order_by('name')
+        return render(request, self.template_name, {'form': form, 'groups': groups})
 
 
-@admin_required
-def delete_group(request, group_id):
-    group = get_object_or_404(Group, pk=group_id)
-    protected_groups = {'Admin', 'Organizer', 'Participant'}
-    if request.method == 'POST':
+class DeleteGroupView(AdminRequiredMixin, View):
+    def post(self, request, group_id):
+        group = get_object_or_404(Group, pk=group_id)
+        protected_groups = {'Admin', 'Organizer', 'Participant'}
         if group.name in protected_groups:
             messages.error(request, 'Default role groups cannot be deleted.')
         else:
             group.delete()
             messages.success(request, 'Group deleted successfully.')
-    return redirect('manage_groups')
+        return redirect('manage_groups')
+
+    def get(self, request, group_id):
+        return redirect('manage_groups')
 
 
-@admin_required
-def change_user_role(request):
-    form = RoleUpdateForm(request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        user = form.cleaned_data['user']
-        group = form.cleaned_data['group']
-        user.groups.clear()
-        user.groups.add(group)
-        messages.success(request, f'Role updated for {user.username}.')
-        return redirect('change_user_role')
-    return render(request, 'events/change_role.html', {'form': form})
+class ChangeUserRoleView(AdminRequiredMixin, View):
+    template_name = 'events/change_role.html'
+
+    def get(self, request):
+        form = RoleUpdateForm()
+        return render(request, self.template_name, {'form': form})
+
+    def post(self, request):
+        form = RoleUpdateForm(request.POST)
+        if form.is_valid():
+            user = form.cleaned_data['user']
+            group = form.cleaned_data['group']
+            user.groups.clear()
+            user.groups.add(group)
+            messages.success(request, f'Role updated for {user.username}.')
+            return redirect('change_user_role')
+        return render(request, self.template_name, {'form': form})
+
+
+class ProfileDetailView(LoginRequiredMixin, TemplateView):
+    template_name = 'profile/profile_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['profile_user'] = self.request.user
+        return context
+
+
+class ProfileUpdateView(LoginRequiredMixin, UpdateView):
+    model = User
+    form_class = ProfileUpdateForm
+    template_name = 'profile/profile_edit.html'
+    success_url = reverse_lazy('profile_detail')
+
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Profile updated successfully.')
+        return super().form_valid(form)
+
+
+class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
+    template_name = 'profile/change_password.html'
+    success_url = reverse_lazy('profile_detail')
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Password changed successfully.')
+        return super().form_valid(form)

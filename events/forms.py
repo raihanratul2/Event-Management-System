@@ -1,7 +1,10 @@
 from django import forms
+from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import Group
 from .models import Event, Category
+
+User = get_user_model()
 
 BASE_CLASSES = (
     "w-full rounded-xl bg-slate-900/60 border border-white/10 "
@@ -90,6 +93,19 @@ class SignUpForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+class ProfileUpdateForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name', 'email', 'phone_number', 'profile_picture')
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': BASE_CLASSES, 'placeholder': 'First name'}),
+            'last_name': forms.TextInput(attrs={'class': BASE_CLASSES, 'placeholder': 'Last name'}),
+            'email': forms.EmailInput(attrs={'class': BASE_CLASSES, 'placeholder': 'email@example.com'}),
+            'phone_number': forms.TextInput(attrs={'class': BASE_CLASSES, 'placeholder': '+1234567890'}),
+            'profile_picture': forms.ClearableFileInput(attrs={'class': BASE_CLASSES}),
+        }
 
 
 class LoginForm(AuthenticationForm):
